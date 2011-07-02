@@ -43,7 +43,7 @@
 	<ul>
 		<li>Accessible (WAI-ARIA-enabled)</li>
 		<li>Supports getting (and setting, when allowed by the spec) all the IDL attributes defined in the specification (value, max, position, labels), through ES5 getters and setters</li>
-		<li>Supoorts setting both max and value attributes, through mutation events</li>
+		<li>Supports setting both max and value attributes, through mutation events</li>
 		<li>Will fix new progress elements as well, through mutation events</li>
 		<li>No extra HTML elements needed and none added through script</li>
 	</ul>
@@ -55,10 +55,10 @@
 	<p>Supporting Safari 5 was impossible, as it completely drops the progress tags and gives you an error</p>
 	
 	<h2>How to use</h2>
-	<p>Just add <code>progress-polyfill.css</code> in the head section and <code>progress-polyfill.js</code> near the body closing tag.
+	<p>Just add <code>progress-polyfill.js</code> near the body closing tag.</p>
 	
 	<h2>Unit tests</h2>
-	<p style="display:none">
+	<p >
 		<label><progress max="0.8" value="0.6" id="progress4"></progress></label>
 		<label for="progress4">Test label for progress4</label>
 		<progress max="100" id="progress0"></progress>

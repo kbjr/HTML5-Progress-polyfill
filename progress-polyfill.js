@@ -1,10 +1,13 @@
 /*
  * <progress> polyfill
- * Don't forget to also include progress-polyfill.css!
+ * You may need to change
  * @author Lea Verou
  */
  
 (function(){
+
+// The location of the polyfill stylesheet
+var CSS_FILE = 'progress-polyfill.css';
 
 // Test browser support first
 if('position' in document.createElement('progress')) {
@@ -16,7 +19,7 @@ if('position' in document.createElement('progress')) {
 var cssElem = document.createElement('link');
 cssElem.rel = 'stylesheet';
 cssElem.type = 'text/css';
-cssElem.href = 'progress-polyfill.css';
+cssElem.href = CSS_FILE;
 document.getElementsByTagName('head')[0].appendChild(cssElem);
 
 /**
@@ -47,6 +50,7 @@ if (!defineProperty) {
 	}
 }
 
+// Get a function arr() for casting NodeList to Array
 try {
 	[].slice.apply(document.images)
 	
@@ -81,7 +85,7 @@ var self = window.ProgressPolyfill = {
 			
 			set: function(value) {
 				this.setAttribute('aria-valuemax', value);
-				
+
 				if(!attrsAsProps) {
 					this.setAttribute('max', value);
 				}
@@ -163,7 +167,21 @@ var self = window.ProgressPolyfill = {
 		if(self.isInited(progress)) {
 			return; // Already init-ed
 		}
-		
+
+		// Replace the progress element with a dynamically created one (fixes IE
+		// attribute bugs)
+		var newProgress = document.createElement('progress');
+		// Copy over attributes
+		for (var i = 0, c = progress.attributes.length; i < c; i++) {
+			var attr = progress.attributes[i];
+			newProgress[attr.nodeName] = attr.nodeValue || attr.value;
+			newProgress.setAttribute(attr.nodeName, attr.nodeValue || attr.value);
+		}
+		// Replace the old node with the new one
+		progress.parentNode.insertBefore(newProgress, progress);
+		progress.parentNode.removeChild(progress);
+		progress = newProgress;
+
 		// Add ARIA
 		progress.setAttribute('role', 'progressbar');
 		progress.setAttribute('aria-valuemin', '0');
@@ -189,9 +207,9 @@ var self = window.ProgressPolyfill = {
 };
 
 
-
-for(var i=self.progresses.length-1; i>=0; i--) {
-	self.init(self.progresses[i]);
+var progs = arr(self.progresses);
+for(var i=progs.length-1; i>=0; i--) {
+	self.init(progs[i]);
 }
 
 // Take care of future ones too, if supported
