@@ -11,6 +11,14 @@ if('position' in document.createElement('progress')) {
 	return;
 }
 
+// Load the progress-polyfill.css file dynamically only
+// if needed for the polyfill
+var cssElem = document.createElement('link');
+cssElem.rel = 'stylesheet';
+cssElem.type = 'text/css';
+cssElem.href = 'progress-polyfill.css';
+document.getElementsByTagName('head')[0].appendChild(cssElem);
+
 /**
  * Private functions
  */
