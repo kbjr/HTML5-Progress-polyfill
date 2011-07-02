@@ -76,6 +76,34 @@ var attrsAsProps = (function(){
 	return e.getAttribute('foo') === 'bar';
 })();
 
+// Parses an outerHTML string to get the attributes section
+// of a progress tag and allows selecting individual attributes
+var getAttr = (function() {
+	var
+	regexes = { },
+	getAttributes = /<progress([^>]+)/;
+	return function(elem, attr) {
+		if (elem.outerHTML) {
+			var attrs = getAttributes.exec(elem.outerHTML);
+			if (attrs) {
+				attrs = attrs[1];
+				if (! regexes[attr]) {
+					regexes[attr] = new RegExp('/\\s+' + attr + '=(.+)(\\s|$)/');
+				}
+				var value = regexes[attr].exec(attrs);
+				console.log(elem.id, attrs)
+				if (value) {
+					value = value[1];
+					if (value.charAt(0) === '"' || value.charAt(0) === "'") {
+						value = value.substring(0, value.length - 1);
+					}
+				}
+				return value;
+			}
+		}
+	};
+}());
+
 var self = window.ProgressPolyfill = {
 	DOMInterface: {
 		max: {
@@ -168,20 +196,6 @@ var self = window.ProgressPolyfill = {
 			return; // Already init-ed
 		}
 
-		// Replace the progress element with a dynamically created one (fixes IE
-		// attribute bugs)
-		var newProgress = document.createElement('progress');
-		// Copy over attributes
-		for (var i = 0, c = progress.attributes.length; i < c; i++) {
-			var attr = progress.attributes[i];
-			newProgress[attr.nodeName] = attr.nodeValue || attr.value;
-			newProgress.setAttribute(attr.nodeName, attr.nodeValue || attr.value);
-		}
-		// Replace the old node with the new one
-		progress.parentNode.insertBefore(newProgress, progress);
-		progress.parentNode.removeChild(progress);
-		progress = newProgress;
-
 		// Add ARIA
 		progress.setAttribute('role', 'progressbar');
 		progress.setAttribute('aria-valuemin', '0');
@@ -198,6 +212,23 @@ var self = window.ProgressPolyfill = {
 				set: self.DOMInterface[attribute].set
 			});
 		}
+
+		// Fix getAttribute in IE
+		try {
+			progress.getAttribute = function(attr) {
+				var value = progress.constructor.prototype.getAttribute.call(progress, attr);
+				if (value === null && (attr === 'max' || attr === 'value')) {
+					var fromOuter = getAttr(progress, attr);
+					if (fromOuter) {
+						return fromOuter;
+					}
+				}
+				return value;
+			}
+			progress.getAttribute.toString = function() {
+				progress.constructor.prototype.getAttribute + '';
+			}
+		} catch (e) { }
 		
 		self.redraw(progress);
 	},
@@ -206,10 +237,8 @@ var self = window.ProgressPolyfill = {
 	progresses: document.getElementsByTagName('progress')
 };
 
-
-var progs = arr(self.progresses);
-for(var i=progs.length-1; i>=0; i--) {
-	self.init(progs[i]);
+for(var i=self.progresses.length-1; i>=0; i--) {
+	self.init(self.progresses[i]);
 }
 
 // Take care of future ones too, if supported
