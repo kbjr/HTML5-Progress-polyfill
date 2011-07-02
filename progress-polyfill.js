@@ -81,21 +81,22 @@ var attrsAsProps = (function(){
 var getAttr = (function() {
 	var
 	regexes = { },
+	whitespace = /\s+/,
 	getAttributes = /<progress([^>]+)/;
 	return function(elem, attr) {
-		if (elem.outerHTML) {
-			var attrs = getAttributes.exec(elem.outerHTML);
+		var outer = (typeof elem === 'string') ? elem : elem.outerHTML;
+		if (outer) {
+			var attrs = getAttributes.exec(outer);
 			if (attrs) {
 				attrs = attrs[1];
 				if (! regexes[attr]) {
-					regexes[attr] = new RegExp('/\\s+' + attr + '=(.+)(\\s|$)/');
+					regexes[attr] = new RegExp('\\s+' + attr + '=(.+)(\\s|$)');
 				}
 				var value = regexes[attr].exec(attrs);
-				console.log(elem.id, attrs)
 				if (value) {
-					value = value[1];
+					value = value[1].split(whitespace)[0];
 					if (value.charAt(0) === '"' || value.charAt(0) === "'") {
-						value = value.substring(0, value.length - 1);
+						value = value.substring(1, value.length - 1);
 					}
 				}
 				return value;
@@ -196,6 +197,10 @@ var self = window.ProgressPolyfill = {
 			return; // Already init-ed
 		}
 
+		// Get initial attributes if they exist
+		var initialMax = getAttr(progress, 'max');
+		var initialValue = getAttr(progress, 'value');
+
 		// Add ARIA
 		progress.setAttribute('role', 'progressbar');
 		progress.setAttribute('aria-valuemin', '0');
@@ -213,22 +218,52 @@ var self = window.ProgressPolyfill = {
 			});
 		}
 
-		// Fix getAttribute in IE
-		try {
+		// Fix (get|set|remove)Attribute in IE
+		if (
+			(initialMax && progress.getAttribute('max') !== initialMax) ||
+			(initialValue && progress.getAttribute('value') !== initialValue)
+		) {
+			var
+			_attributes = { },
+			proto = progress.constructor.prototype;
+			// Fix setAttribute
+			progress.setAttribute = function(attr, value) {
+				_attributes[attr] = String(value);
+				proto.setAttribute.call(progress, attr, value);
+			};
+			progress.setAttribute.toString = function() {
+				proto.setAttribute + '';
+			};
+			// Fix getAttribute
 			progress.getAttribute = function(attr) {
-				var value = progress.constructor.prototype.getAttribute.call(progress, attr);
+				var value = proto.getAttribute.call(progress, attr);
 				if (value === null && (attr === 'max' || attr === 'value')) {
-					var fromOuter = getAttr(progress, attr);
-					if (fromOuter) {
-						return fromOuter;
+					value = getAttr(progress, attr);
+					if (value === null) {
+						value = _attributes[attr] || null;
 					}
 				}
 				return value;
-			}
+			};
 			progress.getAttribute.toString = function() {
-				progress.constructor.prototype.getAttribute + '';
-			}
-		} catch (e) { }
+				proto.getAttribute + '';
+			};
+			// Fix remove attribute
+			progress.removeAttribute = function(attr) {
+				_attributes[attr] = null;
+				proto.removeAttribute.call(progress, attr);
+			};
+			progress.removeAttribute.toString = function() {
+				proto.removeAttribute + '';
+			};
+		}
+
+		if (initialMax) {
+			progress.setAttribute('max', initialMax);
+		}
+		if (initialValue) {
+			progress.setAttribute('value', initialValue);
+		}
 		
 		self.redraw(progress);
 	},
